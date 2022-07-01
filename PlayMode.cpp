@@ -71,6 +71,28 @@ PlayMode::PlayMode()
         0b00000000,
     };
 
+    // upside down
+    ppu.tile_table[33].bit0 = {
+        0b01111110,
+        0b11111111,
+        0b11111111,
+        0b11111111,
+        0b11111111,
+        0b11111111,
+        0b11111111,
+        0b01111110,
+    };
+    ppu.tile_table[33].bit1 = {
+        0b00000000,
+        0b00000000,
+        0b00100100,
+        0b00000000,
+        0b00100100,
+        0b00011000,
+        0b00000000,
+        0b00000000,
+    };
+
     // makes the outside of tiles 0-16 solid:
     ppu.palette_table[0] = {
         glm::u8vec4(0x00, 0x00, 0x00, 0x00),
@@ -87,7 +109,7 @@ PlayMode::PlayMode()
         glm::u8vec4(0x00, 0x00, 0x00, 0xff),
     };
 
-    // used for the player:
+    // colours used for the player:
     ppu.palette_table[7] = {
         glm::u8vec4(0x00, 0x00, 0x00, 0x00),
         glm::u8vec4(0xff, 0xff, 0x00, 0xff),
@@ -95,7 +117,7 @@ PlayMode::PlayMode()
         glm::u8vec4(0x00, 0x00, 0x00, 0xff),
     };
 
-    // used for the misc other sprites:
+    // colours used for the misc other sprites:
     ppu.palette_table[6] = {
         glm::u8vec4(0x00, 0x00, 0x00, 0x00),
         glm::u8vec4(0x88, 0x88, 0xff, 0xff),
@@ -200,7 +222,8 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
     // player sprite:
     ppu.sprites[0].x = int32_t(player_at.x);
     ppu.sprites[0].y = int32_t(player_at.y);
-    ppu.sprites[0].index = 32;
+    ppu.sprites[0].index = toggle ? 32 : 33;
+    toggle = !toggle;
     ppu.sprites[0].attributes = 7;
 
     // some other misc sprites:

@@ -40,10 +40,12 @@ struct PPU466 {
     // For a "true NES" experience, you should set:
     //   color 0 to fully transparent (a = 0)
     //   and color 1-3 to fully opaque (a = 0xff)
+    /// TLDR: this means a Palette can only have 4 colours at a time
 
     // Palette Table:
     //  The PPU stores 8 palettes for use when drawing tiles:
     std::array<Palette, 8> palette_table;
+    /// TLDR: this means we can use up to 8 distinct colour palettes in the game
 
     // Tile:
     //  The PPU uses 8x8 2-bit indexed-color tiles:
@@ -55,6 +57,8 @@ struct PPU466 {
     //  For example, to read the color index at pixel (2,7):
     //   bit0_at_2_7 = (tile.bit0[7] >> 2) & 1;
     //   bit1_at_2_7 = (tile.bit1[7] >> 2) & 1;
+	///   bit0_at_3_7 = (tile.bit0[7] >> 3) & 1;
+    ///   bit1_at_4_5 = (tile.bit1[5] >> 4) & 1;
     //   color_index_at_2_7 = (bit1_at_2_7 << 1) | bit0_at_2_7;
     struct Tile {
         std::array<uint8_t, 8> bit0; //<-- controls bit 0 of the color index
