@@ -6,6 +6,9 @@
 // for glm::value_ptr() :
 #include <glm/gtc/type_ptr.hpp>
 
+// load_save_png
+#include "load_save_png.hpp"
+
 #include <random>
 
 PlayMode::PlayMode()
@@ -16,6 +19,15 @@ PlayMode::PlayMode()
     //  or, at least, if you do hardcode them like this,
     //   make yourself a script that spits out the code that you paste in here
     //    and check that script into your repository.
+
+    // load png
+    glm::uvec2 size;
+    std::vector<glm::u8vec4> data;
+    OriginLocation origin = OriginLocation::UpperLeftOrigin;
+    load_png("assets/mario.png", &size, &data, origin);
+    convert_to_new_size(glm::uvec2(8, 8), size, data);
+    convert_to_n_colours(4, size, &(data[0]));
+    save_png("assets/saved.png", size, &(data[0]), origin);
 
     // Also, *don't* use these tiles in your game:
 
@@ -222,8 +234,7 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
     // player sprite:
     ppu.sprites[0].x = int32_t(player_at.x);
     ppu.sprites[0].y = int32_t(player_at.y);
-    ppu.sprites[0].index = toggle ? 32 : 33;
-    toggle = !toggle;
+    ppu.sprites[0].index = 32;
     ppu.sprites[0].attributes = 7;
 
     // some other misc sprites:
