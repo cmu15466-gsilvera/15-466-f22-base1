@@ -8,6 +8,7 @@
 #include <vector>
 
 #define LOG_ERROR(X) std::cerr << X << std::endl
+#define COLOR_TO_VEC4(c) (glm::vec4(c.r, c.g, c.b, c.a))
 
 using std::vector;
 
@@ -181,34 +182,56 @@ void save_png(std::ostream& to, unsigned int width, unsigned int height, glm::u8
     return;
 }
 
-void convert_to_n_colours(const size_t n, const glm::uvec2 size, glm::u8vec4* data)
+glm::u8vec4 tile_avg(const std::vector<glm::u8vec4>& data, const glm::uvec2 size, const size_t x, const size_t y, const size_t w, const size_t h)
+{
+    // take the average of colours into one
+    int r, g, b, a;
+    r = g = b = a = 0;
+    for (size_t j = 0; j < h; j++) {
+        for (size_t i = 0; i < w; i++) {
+            const glm::u8vec4& og_colour = data[((x * w) + i) + size.x * ((y * h) + j)];
+            r += (int)(og_colour.r);
+            g += (int)(og_colour.g);
+            b += (int)(og_colour.b);
+            a += (int)(og_colour.a);
+        }
+    }
+    const size_t count = w * h;
+    return glm::u8vec4(r / count, g / count, b / count, a / count);
+}
+
+glm::u8vec4 closest_in_bank(const glm::u8vec4& og_colour, const std::vector<glm::u8vec4>& colour_bank)
+{
+    // compute (euclidean) distance to the representative n colours and use the best colour (smallest dist)
+    // to represent this pixel
+    glm::u8vec4 new_colour = colour_bank[0];
+    float best_dist = 1e9; // +inf
+    for (const glm::u8vec4& nth_colour : colour_bank) {
+        const float dist = glm::length(COLOR_TO_VEC4(nth_colour) - COLOR_TO_VEC4(og_colour));
+        if (dist < best_dist) {
+            best_dist = dist;
+            new_colour = nth_colour;
+        }
+    }
+    return new_colour;
+}
+
+void convert_to_n_colours(const size_t n, const glm::uvec2 size, glm::u8vec4* data, std::vector<glm::u8vec4>& bank)
 {
     // convert the spectrum of colours from 0-255 to 0-n respecting the distribution
     // first determine which n colours are to be used
 
-    const std::vector<glm::u8vec4> n_colours = {
+    bank = {
         glm::u8vec4(255, 255, 255, 0),
         glm::u8vec4(255, 0, 0, 255),
         glm::u8vec4(0, 0, 255, 255),
         glm::u8vec4(0, 0, 0, 0),
     };
+
     // then determine how these colours map to the data
-#define COLOR_TO_VEC4(c) (glm::vec4(c.r, c.g, c.b, c.a))
     for (size_t y = 0; y < size.y; y++) {
         for (size_t x = 0; x < size.x; x++) {
-            // compute (euclidean) distance to the representative n colours and use the best colour (smallest dist)
-            // to represent this pixel
-            const glm::u8vec4& og_colour = data[x + size.x * y];
-            glm::u8vec4 new_colour = n_colours[0];
-            float best_dist = 1e9; // +inf
-            for (const glm::u8vec4& nth_colour : n_colours) {
-                const float dist = glm::length(COLOR_TO_VEC4(nth_colour) - COLOR_TO_VEC4(og_colour));
-                if (dist < best_dist) {
-                    best_dist = dist;
-                    new_colour = nth_colour;
-                }
-            }
-            data[x + size.x * y] = new_colour;
+            data[x + size.x * y] = closest_in_bank(data[x + size.x * y], bank);
         }
     }
 }
@@ -223,26 +246,27 @@ void convert_to_new_size(const glm::uvec2 new_size, glm::uvec2& size, std::vecto
     /// TODO: check this is the best (loop traversal) order for cache locality
     for (size_t arr_y = 0; arr_y < new_size.y; arr_y++) {
         for (size_t arr_x = 0; arr_x < new_size.x; arr_x++) {
-            const size_t y = arr_y * iter_y;
-            const size_t x = arr_x * iter_x;
-            // take the average of colours into one
-            int r, g, b, a;
-            r = g = b = a = 0;
-            for (size_t j = 0; j < iter_y; j++) {
-                for (size_t i = 0; i < iter_x; i++) {
-                    const glm::u8vec4& og_colour = data[(x + i) + size.x * (y + j)];
-                    r += (int)(og_colour.r);
-                    g += (int)(og_colour.g);
-                    b += (int)(og_colour.b);
-                    a += (int)(og_colour.a);
-                }
-            }
-            const size_t count = iter_y * iter_x;
-            r = r / count;
-            g = g / count;
-            b = b / count;
-            a = a / count;
-            new_data.push_back(glm::u8vec4(r, g, b, a));
+            new_data.push_back(tile_avg(data, size, arr_x, arr_y, iter_x, iter_y));
+        }
+    }
+    data.clear();
+    // update the original data with the new data
+    data = new_data;
+    size = new_size;
+}
+
+void convert_to_new_size_with_bank(const glm::uvec2 new_size, glm::uvec2& size, std::vector<glm::u8vec4>& data, const std::vector<glm::u8vec4>& colour_bank)
+{
+    // downsample the image from size.x x size.y to (new_size.x x new_size.y)
+    /// NOTE: only supports downsampling currently (not upsampling!)
+    std::vector<glm::u8vec4> new_data;
+    const size_t iter_x = size.x / new_size.x;
+    const size_t iter_y = size.y / new_size.y;
+    /// TODO: check this is the best (loop traversal) order for cache locality
+    for (size_t arr_y = 0; arr_y < new_size.y; arr_y++) {
+        for (size_t arr_x = 0; arr_x < new_size.x; arr_x++) {
+            glm::u8vec4 avg = tile_avg(data, size, arr_x, arr_y, iter_x, iter_y);
+            new_data.push_back(closest_in_bank(avg, colour_bank));
         }
     }
     data.clear();

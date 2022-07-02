@@ -25,8 +25,9 @@ PlayMode::PlayMode()
     std::vector<glm::u8vec4> data;
     OriginLocation origin = OriginLocation::UpperLeftOrigin;
     load_png("assets/mario.png", &size, &data, origin);
-    convert_to_new_size(glm::uvec2(8, 8), size, data);
-    convert_to_n_colours(4, size, &(data[0]));
+    std::vector<glm::u8vec4> colour_bank;
+    convert_to_n_colours(4, size, &(data[0]), colour_bank);
+    convert_to_new_size_with_bank(glm::uvec2(64, 64), size, data, colour_bank);
     save_png("assets/saved.png", size, &(data[0]), origin);
 
     // Also, *don't* use these tiles in your game:

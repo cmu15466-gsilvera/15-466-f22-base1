@@ -23,5 +23,6 @@ void save_png(std::string filename, glm::uvec2 size, glm::u8vec4 const* data, Or
  * Conversion pipeline between standard PNG's and PPU466.
  */
 
-void convert_to_n_colours(const size_t n, glm::uvec2 size, glm::u8vec4* data);
+void convert_to_n_colours(const size_t n, glm::uvec2 size, glm::u8vec4* data, std::vector<glm::u8vec4>& bank);
 void convert_to_new_size(const glm::uvec2 new_size, glm::uvec2& size, std::vector<glm::u8vec4>& data);
+void convert_to_new_size_with_bank(const glm::uvec2 new_size, glm::uvec2& size, std::vector<glm::u8vec4>& data, const std::vector<glm::u8vec4>& bank);
