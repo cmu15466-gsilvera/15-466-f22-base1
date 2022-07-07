@@ -7,6 +7,8 @@
 
 #include <array>
 #include <glm/glm.hpp>
+#include <iostream>
+#include <vector>
 
 struct PPU466 {
     PPU466();
@@ -57,7 +59,7 @@ struct PPU466 {
     //  For example, to read the color index at pixel (2,7):
     //   bit0_at_2_7 = (tile.bit0[7] >> 2) & 1;
     //   bit1_at_2_7 = (tile.bit1[7] >> 2) & 1;
-	///   bit0_at_3_7 = (tile.bit0[7] >> 3) & 1;
+    ///   bit0_at_3_7 = (tile.bit0[7] >> 3) & 1;
     ///   bit1_at_4_5 = (tile.bit1[5] >> 4) & 1;
     //   color_index_at_2_7 = (bit1_at_2_7 << 1) | bit0_at_2_7;
     struct Tile {
@@ -138,4 +140,39 @@ struct PPU466 {
     //  The PPU always draws exactly 64 sprites:
     //   any sprites you don't want to use should be moved off the screen (y >= 240)
     std::array<Sprite, 64> sprites;
+};
+
+struct SpriteData {
+    struct PPU466::Tile bits;
+    PPU466::Palette colours;
+
+    SpriteData(const std::vector<glm::u8vec4>& data, const std::vector<glm::u8vec4>& colour_bank)
+    {
+        assert(data.size() == 8 * 8); // for the size of this sprite
+        std::copy_n(colour_bank.begin(), 4, colours.begin()); // get the colours
+
+        auto get_col_idx = [colour_bank](const glm::u8vec4& col) {
+            for (size_t i = 0; i < colour_bank.size(); i++) {
+                if (col == colour_bank[i]) {
+                    return i;
+                }
+            }
+            return 0ul;
+        };
+
+        // copy over the bits
+        {
+            for (size_t i = 0; i < 8; i++) {
+                uint8_t bit0s = 0, bit1s = 0;
+                for (size_t j = 0; j < 8; j++) {
+                    // ordering is a bit weird to match the PPU format
+                    const int col_idx = get_col_idx(data[64 - (i * 8 + j)]);
+                    bit0s |= ((col_idx & 0x1) << (7 - j));
+                    bit1s |= (((col_idx >> 1) & 0x1) << (7 - j));
+                }
+                bits.bit0[i] = bit0s;
+                bits.bit1[i] = bit1s;
+            }
+        }
+    }
 };

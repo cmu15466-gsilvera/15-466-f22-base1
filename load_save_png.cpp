@@ -222,10 +222,10 @@ void convert_to_n_colours(const size_t n, const glm::uvec2 size, glm::u8vec4* da
     // first determine which n colours are to be used
 
     bank = {
-        glm::u8vec4(255, 255, 255, 0),
-        glm::u8vec4(255, 0, 0, 255),
-        glm::u8vec4(0, 0, 255, 255),
         glm::u8vec4(0, 0, 0, 0),
+        glm::u8vec4(255, 0, 0, 255),
+        glm::u8vec4(0, 255, 0, 255),
+        glm::u8vec4(0, 0, 255, 255),
     };
 
     // then determine how these colours map to the data
