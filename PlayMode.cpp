@@ -9,55 +9,49 @@
 // load_save_png
 #include "load_save_png.hpp"
 
+#include <algorithm> // std::clamp
 #include <random>
+
+PPU466::Sprite Projectile::sprite;
 
 PlayMode::PlayMode()
 {
-    // TODO:
-    //  you *must* use an asset pipeline of some sort to generate tiles.
-    //  don't hardcode them like this!
-    //  or, at least, if you do hardcode them like this,
-    //   make yourself a script that spits out the code that you paste in here
-    //    and check that script into your repository.
 
-    // load png
-    glm::uvec2 size;
-    std::vector<glm::u8vec4> data;
-    OriginLocation origin = OriginLocation::UpperLeftOrigin;
-    load_png("assets/mario.png", &size, &data, origin);
-    std::vector<glm::u8vec4> colour_bank;
-    convert_to_n_colours(4, size, &(data[0]), colour_bank);
-    convert_to_new_size_with_bank(glm::uvec2(8, 8), size, data, colour_bank);
-    save_png("assets/saved.png", size, &(data[0]), origin);
+    {
+        // load png
+        glm::uvec2 size;
+        std::vector<glm::u8vec4> data;
+        OriginLocation origin = OriginLocation::UpperLeftOrigin;
+        load_png("assets/mario.png", &size, &data, origin);
+        std::vector<glm::u8vec4> colour_bank;
+        convert_to_n_colours(4, size, &(data[0]), colour_bank);
+        convert_to_new_size_with_bank(glm::uvec2(8, 8), size, data, colour_bank);
+        save_png("assets/cato-saved.png", size, &(data[0]), origin);
 
-    SpriteData player_sprite(data, colour_bank);
+        SpriteData player_sprite(data, colour_bank);
 
-    // use sprite 32 as a "player":
-    ppu.tile_table[32].bit0 = player_sprite.bits.bit0;
-    ppu.tile_table[32].bit1 = player_sprite.bits.bit1;
-    ppu.palette_table[7] = player_sprite.colours;
+        // initialize siphon (player) data
+        siphon.x = PPU466::ScreenWidth / 2;
+        siphon.y = PPU466::ScreenHeight / 2;
+        siphon.index = 32;
+        siphon.attributes = 7;
 
-    // upside down
-    ppu.tile_table[33].bit0 = {
-        0b01111110,
-        0b11111111,
-        0b11111111,
-        0b11111111,
-        0b11111111,
-        0b11111111,
-        0b11111111,
-        0b01111110,
-    };
-    ppu.tile_table[33].bit1 = {
-        0b00000000,
-        0b00000000,
-        0b00100100,
-        0b00000000,
-        0b00100100,
-        0b00011000,
-        0b00000000,
-        0b00000000,
-    };
+        // use sprite 32 as a "player":
+        ppu.tile_table[siphon.index] = player_sprite.bits;
+        ppu.palette_table[7] = player_sprite.colours;
+    }
+
+    {
+        Projectile::sprite.index = 32;
+        Projectile::sprite.attributes = 6;
+        projectiles.reserve(numProjectiles);
+        for (size_t i = 0; i < numProjectiles; i++) {
+            Projectile newProj;
+            newProj.spriteIdx = i + 1;
+            newProj.randomInit();
+            projectiles.push_back(newProj);
+        }
+    }
 
     // makes the outside of tiles 0-16 solid:
     ppu.palette_table[0] = {
@@ -128,29 +122,39 @@ bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
     return false;
 }
 
-void PlayMode::update(float elapsed)
+void PlayMode::update(float dt)
 {
 
     // slowly rotates through [0,1):
     //  (will be used to set background color)
-    background_fade += elapsed / 10.0f;
+    background_fade += dt / 10.0f;
     background_fade -= std::floor(background_fade);
 
-    constexpr float PlayerSpeed = 30.0f;
+    constexpr float speed = 1.0f;
     if (left.pressed)
-        player_at.x -= PlayerSpeed * elapsed;
+        siphon.x -= speed;
     if (right.pressed)
-        player_at.x += PlayerSpeed * elapsed;
+        siphon.x += speed;
     if (down.pressed)
-        player_at.y -= PlayerSpeed * elapsed;
+        siphon.y -= speed;
     if (up.pressed)
-        player_at.y += PlayerSpeed * elapsed;
+        siphon.y += speed;
+
+    siphon.x = std::max(uint8_t(1), std::min(uint8_t(PPU466::ScreenWidth - 8), siphon.x));
+    siphon.y = std::max(uint8_t(1), std::min(uint8_t(PPU466::ScreenHeight - 8), siphon.y));
 
     // reset button press counters:
     left.downs = 0;
     right.downs = 0;
     up.downs = 0;
     down.downs = 0;
+
+    for (Projectile& p : projectiles) {
+        p.pos += p.vel;
+        if (p.pos.x < 0 || p.pos.y < 0 || p.pos.x > PPU466::ScreenWidth || p.pos.y > PPU466::ScreenHeight) {
+            p.randomInit();
+        }
+    }
 }
 
 void PlayMode::draw(glm::uvec2 const& drawable_size)
@@ -174,22 +178,21 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
     }
 
     // background scroll:
-    ppu.background_position.x = int32_t(-0.5f * player_at.x);
-    ppu.background_position.y = int32_t(-0.5f * player_at.y);
+    ppu.background_position.x = int32_t(-0.5f * siphon.x);
+    ppu.background_position.y = int32_t(-0.5f * siphon.y);
 
     // player sprite:
-    ppu.sprites[0].x = int32_t(player_at.x);
-    ppu.sprites[0].y = int32_t(player_at.y);
-    ppu.sprites[0].index = 32;
-    ppu.sprites[0].attributes = 7;
+    ppu.sprites[0] = siphon;
 
     // some other misc sprites:
-    for (uint32_t i = 1; i < 63; ++i) {
-        float amt = (i + 2.0f * background_fade) / 62.0f;
-        ppu.sprites[i].x = int32_t(0.5f * PPU466::ScreenWidth + std::cos(2.0f * M_PI * amt * 5.0f + 0.01f * player_at.x) * 0.4f * PPU466::ScreenWidth);
-        ppu.sprites[i].y = int32_t(0.5f * PPU466::ScreenHeight + std::sin(2.0f * M_PI * amt * 3.0f + 0.01f * player_at.y) * 0.4f * PPU466::ScreenWidth);
-        ppu.sprites[i].index = 32;
-        ppu.sprites[i].attributes = 6;
+    // for (uint32_t i = 0; i < projectile_pos.size(); ++i) {
+    for (const Projectile& p : projectiles) {
+        int i = p.spriteIdx;
+        // float amt = (i + 2.0f * background_fade) / 62.0f;
+        ppu.sprites[i].x = p.pos[0];
+        ppu.sprites[i].y = p.pos[1];
+        ppu.sprites[i].index = p.sprite.index;
+        ppu.sprites[i].attributes = p.sprite.attributes;
         if (i % 2)
             ppu.sprites[i].attributes |= 0x80; //'behind' bit
     }

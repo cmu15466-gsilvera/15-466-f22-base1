@@ -224,7 +224,7 @@ void convert_to_n_colours(const size_t n, const glm::uvec2 size, glm::u8vec4* da
     bank = {
         glm::u8vec4(0, 0, 0, 0),
         glm::u8vec4(255, 0, 0, 255),
-        glm::u8vec4(0, 255, 0, 255),
+        glm::u8vec4(200, 200, 0, 255),
         glm::u8vec4(0, 0, 255, 255),
     };
 
