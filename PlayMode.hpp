@@ -52,6 +52,7 @@ struct PlayMode : Mode {
     Object siphon;
 
     const int numProjectiles = 5;
+    const int background_idx = 0;
     std::vector<Projectile> projectiles;
 
     // input tracking:

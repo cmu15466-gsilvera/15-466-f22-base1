@@ -15,6 +15,7 @@
 PlayMode::PlayMode()
 {
 
+    // main character
     {
         // load png
         glm::uvec2 size;
@@ -34,44 +35,39 @@ PlayMode::PlayMode()
         siphon.sprite.index = 32;
         siphon.sprite.attributes = 7;
         ppu.tile_table[siphon.sprite.index] = siphon_sprite.bits;
-        ppu.palette_table[7] = siphon_sprite.colours;
+        ppu.palette_table[siphon.sprite.attributes] = siphon_sprite.colours;
     }
 
+    // projectiles
     {
         projectiles.reserve(numProjectiles);
+        const int proj_idx = 6;
+        // colours used for the misc other sprites:
+        ppu.palette_table[proj_idx] = {
+            glm::u8vec4(0x00, 0x00, 0x00, 0x00),
+            glm::u8vec4(0x88, 0x88, 0xff, 0xff),
+            glm::u8vec4(0x00, 0x00, 0x00, 0xff),
+            glm::u8vec4(0x00, 0x00, 0x00, 0x00),
+        };
         for (size_t i = 0; i < numProjectiles; i++) {
             Projectile newProj;
             newProj.spriteID = i + 1;
             newProj.sprite.index = 32;
-            newProj.sprite.attributes = 6;
+            newProj.sprite.attributes = proj_idx;
             newProj.randomInit();
             projectiles.push_back(newProj);
         }
     }
 
-    // makes the outside of tiles 0-16 solid:
-    ppu.palette_table[0] = {
-        glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-        glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-        glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-        glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-    };
-
-    // makes the center of tiles 0-16 solid:
-    ppu.palette_table[1] = {
-        glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-        glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-        glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-        glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-    };
-
-    // colours used for the misc other sprites:
-    ppu.palette_table[6] = {
-        glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-        glm::u8vec4(0x88, 0x88, 0xff, 0xff),
-        glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-        glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-    };
+    // background
+    {
+        ppu.palette_table[background_idx] = {
+            glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
+            glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
+            glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
+            glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
+        };
+    }
 }
 
 PlayMode::~PlayMode()
@@ -166,12 +162,12 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
 
     // tilemap gets recomputed every frame as some weird plasma thing:
     // NOTE: don't do this in your game! actually make a map or something :-)
-    // for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
-    //     for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x) {
-    //         // TODO: make weird plasma thing
-    //         ppu.background[x + PPU466::BackgroundWidth * y] = ((x + y) % 16);
-    //     }
-    // }
+    for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
+        for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x) {
+            // TODO: make weird plasma thing
+            ppu.background[x + PPU466::BackgroundWidth * y] = background_idx;
+        }
+    }
 
     // background scroll:
     // ppu.background_position.x = int32_t(-0.5f * siphon.x);
