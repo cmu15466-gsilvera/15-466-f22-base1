@@ -6,11 +6,14 @@
 #include <deque>
 #include <vector>
 
-struct Projectile {
-    int spriteIdx;
-    int wall;
+struct Object {
+    int spriteID;
     glm::vec2 pos, vel;
-    static PPU466::Sprite sprite;
+    PPU466::Sprite sprite;
+};
+
+struct Projectile : Object {
+    int wall;
 
     void randomInit()
     {
@@ -46,9 +49,8 @@ struct PlayMode : Mode {
 
     //----- game state -----
 
-    PPU466::Sprite siphon;
+    Object siphon;
 
-    PPU466::Sprite projectile;
     const int numProjectiles = 5;
     std::vector<Projectile> projectiles;
 

@@ -12,8 +12,6 @@
 #include <algorithm> // std::clamp
 #include <random>
 
-PPU466::Sprite Projectile::sprite;
-
 PlayMode::PlayMode()
 {
 
@@ -28,26 +26,24 @@ PlayMode::PlayMode()
         convert_to_new_size_with_bank(glm::uvec2(8, 8), size, data, colour_bank);
         save_png("assets/cato-saved.png", size, &(data[0]), origin);
 
-        SpriteData player_sprite(data, colour_bank);
-
+        SpriteData siphon_sprite(data, colour_bank);
         // initialize siphon (player) data
-        siphon.x = PPU466::ScreenWidth / 2;
-        siphon.y = PPU466::ScreenHeight / 2;
-        siphon.index = 32;
-        siphon.attributes = 7;
-
-        // use sprite 32 as a "player":
-        ppu.tile_table[siphon.index] = player_sprite.bits;
-        ppu.palette_table[7] = player_sprite.colours;
+        siphon.spriteID = 0;
+        siphon.pos.x = PPU466::ScreenWidth / 2;
+        siphon.pos.y = PPU466::ScreenHeight / 2;
+        siphon.sprite.index = 32;
+        siphon.sprite.attributes = 7;
+        ppu.tile_table[siphon.sprite.index] = siphon_sprite.bits;
+        ppu.palette_table[7] = siphon_sprite.colours;
     }
 
     {
-        Projectile::sprite.index = 32;
-        Projectile::sprite.attributes = 6;
         projectiles.reserve(numProjectiles);
         for (size_t i = 0; i < numProjectiles; i++) {
             Projectile newProj;
-            newProj.spriteIdx = i + 1;
+            newProj.spriteID = i + 1;
+            newProj.sprite.index = 32;
+            newProj.sprite.attributes = 6;
             newProj.randomInit();
             projectiles.push_back(newProj);
         }
@@ -132,16 +128,16 @@ void PlayMode::update(float dt)
 
     constexpr float speed = 1.0f;
     if (left.pressed)
-        siphon.x -= speed;
+        siphon.pos.x -= speed;
     if (right.pressed)
-        siphon.x += speed;
+        siphon.pos.x += speed;
     if (down.pressed)
-        siphon.y -= speed;
+        siphon.pos.y -= speed;
     if (up.pressed)
-        siphon.y += speed;
+        siphon.pos.y += speed;
 
-    siphon.x = std::max(uint8_t(1), std::min(uint8_t(PPU466::ScreenWidth - 8), siphon.x));
-    siphon.y = std::max(uint8_t(1), std::min(uint8_t(PPU466::ScreenHeight - 8), siphon.y));
+    siphon.pos.x = std::max(1.f, std::min(float(PPU466::ScreenWidth - 8), siphon.pos.x));
+    siphon.pos.y = std::max(1.f, std::min(float(PPU466::ScreenHeight - 8), siphon.pos.y));
 
     // reset button press counters:
     left.downs = 0;
@@ -170,31 +166,32 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
 
     // tilemap gets recomputed every frame as some weird plasma thing:
     // NOTE: don't do this in your game! actually make a map or something :-)
-    for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
-        for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x) {
-            // TODO: make weird plasma thing
-            ppu.background[x + PPU466::BackgroundWidth * y] = ((x + y) % 16);
-        }
-    }
+    // for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
+    //     for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x) {
+    //         // TODO: make weird plasma thing
+    //         ppu.background[x + PPU466::BackgroundWidth * y] = ((x + y) % 16);
+    //     }
+    // }
 
     // background scroll:
-    ppu.background_position.x = int32_t(-0.5f * siphon.x);
-    ppu.background_position.y = int32_t(-0.5f * siphon.y);
+    // ppu.background_position.x = int32_t(-0.5f * siphon.x);
+    // ppu.background_position.y = int32_t(-0.5f * siphon.y);
 
     // player sprite:
-    ppu.sprites[0] = siphon;
+    siphon.sprite.x = siphon.pos.x;
+    siphon.sprite.y = siphon.pos.y;
+    ppu.sprites[siphon.spriteID] = siphon.sprite;
 
-    // some other misc sprites:
-    // for (uint32_t i = 0; i < projectile_pos.size(); ++i) {
+    // projectile sprites
     for (const Projectile& p : projectiles) {
-        int i = p.spriteIdx;
+        int i = p.spriteID;
         // float amt = (i + 2.0f * background_fade) / 62.0f;
         ppu.sprites[i].x = p.pos[0];
         ppu.sprites[i].y = p.pos[1];
         ppu.sprites[i].index = p.sprite.index;
         ppu.sprites[i].attributes = p.sprite.attributes;
-        if (i % 2)
-            ppu.sprites[i].attributes |= 0x80; //'behind' bit
+        // if (i % 2)
+        //     ppu.sprites[i].attributes |= 0x80; //'behind' bit
     }
 
     //--- actually draw ---
