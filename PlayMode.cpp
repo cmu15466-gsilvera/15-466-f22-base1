@@ -124,15 +124,15 @@ void PlayMode::update(float dt)
 
     constexpr float speed = 1.0f;
     if (left.pressed) {
-        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(0);
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(2);
         siphon.pos.x -= speed;
     }
     if (right.pressed) {
-        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(1);
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(0);
         siphon.pos.x += speed;
     }
     if (down.pressed) {
-        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(2);
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(1);
         siphon.pos.y -= speed;
     }
     if (up.pressed) {

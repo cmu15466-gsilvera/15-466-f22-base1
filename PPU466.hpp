@@ -10,6 +10,8 @@
 #include <iostream>
 #include <vector>
 
+#include "load_save_png.hpp"
+
 struct PPU466 {
     PPU466();
 
@@ -65,30 +67,6 @@ struct PPU466 {
     struct Tile {
         std::array<uint8_t, 8> bit0; //<-- controls bit 0 of the color index
         std::array<uint8_t, 8> bit1; //<-- controls bit 1 of the color index
-        Tile QuadRotate()
-        {
-            // rotate 90 degrees clockwise
-            struct Tile rotated;
-            for (int i = 0; i < 8; i++) {
-                std::cout << "*[";
-                for (int j = 0; j < 8; j++) {
-                    std::cout << int((bit0[i] >> (7 - j)) & 0x1);
-                }
-                std::cout << "]" << std::endl;
-            }
-            std::cout << std::endl;
-            for (int i = 0; i < 8; i++) {
-                std::cout << "[";
-                for (int j = 0; j < 8; j++) {
-                    rotated.bit0[i] |= (bit0[j] & (0x1 << i));
-                    std::cout << int((bit0[j] >> i) & 0x1);
-                    rotated.bit1[i] |= (bit1[j] & (0x1 << i));
-                }
-                std::cout << "]" << std::endl;
-            }
-            std::cout << std::endl;
-            return rotated;
-        }
     };
     static_assert(sizeof(Tile) == 16, "Tile is packed");
 
@@ -180,44 +158,56 @@ struct SpriteData {
         assert(data.size() == 8 * 8); // for the size of this sprite
         std::copy_n(colour_bank.begin(), 4, colours.begin()); // get the colours
 
-        auto get_col_idx = [colour_bank](const glm::u8vec4& col) {
-            for (size_t i = 0; i < colour_bank.size(); i++) {
-                if (col == colour_bank[i]) {
-                    return i;
-                }
-            }
-            return 0ul;
-        };
-
         // copy over the bits
-        {
-            struct PPU466::Tile defaultBits;
+        auto generateBitmap = [&](const std::vector<glm::u8vec4>& dataTmp) {
+            auto get_col_idx = [colour_bank](const glm::u8vec4& col) {
+                for (size_t i = 0; i < colour_bank.size(); i++) {
+                    if (col == colour_bank[i]) {
+                        return i;
+                    }
+                }
+                return 0ul;
+            };
+            struct PPU466::Tile createdBitmap;
             for (size_t i = 0; i < 8; i++) {
                 uint8_t bit0s = 0, bit1s = 0;
                 for (size_t j = 0; j < 8; j++) {
                     // ordering is a bit weird to match the PPU format
-                    const int col_idx = get_col_idx(data[64 - (i * 8 + j)]);
+                    const int col_idx = get_col_idx(dataTmp[64 - (i * 8 + j)]);
                     bit0s |= ((col_idx & 0x1) << (7 - j));
                     bit1s |= (((col_idx >> 1) & 0x1) << (7 - j));
                 }
-                defaultBits.bit0[i] = bit0s;
-                defaultBits.bit1[i] = bit1s;
+                createdBitmap.bit0[i] = bit0s;
+                createdBitmap.bit1[i] = bit1s;
             }
-            bits.push_back(defaultBits);
-            if (multidirectional) {
-                // add the other 3 sprites
-                auto CW90 = defaultBits.QuadRotate();
-                auto CW180 = CW90.QuadRotate();
-                auto CW270 = CW180.QuadRotate();
-                bits.push_back(CW90);
-                bits.push_back(CW180);
-                bits.push_back(CW270);
+            bits.push_back(createdBitmap);
+        };
+
+        generateBitmap(data); // default direction
+        if (multidirectional) {
+            auto data90 = rotate90CW(data);
+            auto data180 = rotate90CW(data90);
+            auto data270 = rotate90CW(data180);
+            generateBitmap(data90);
+            generateBitmap(data180);
+            generateBitmap(data270);
+        }
+    }
+
+    std::vector<glm::u8vec4> rotate90CW(const std::vector<glm::u8vec4>& data) const
+    {
+        assert(data.size() == 8 * 8); // for the size of this sprite
+        std::vector<glm::u8vec4> rotated;
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                rotated.push_back(data[(7 - j) * 8 + i]);
             }
         }
+        return rotated;
     }
 
     struct PPU466::Tile GetBits(int idx = 0) const
     {
-        return bits[idx % bits.size()];
+        return bits[idx];
     }
 };
