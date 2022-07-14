@@ -25,17 +25,17 @@ PlayMode::PlayMode()
         std::vector<glm::u8vec4> colour_bank;
         convert_to_n_colours(4, size, &(data[0]), colour_bank);
         convert_to_new_size_with_bank(glm::uvec2(8, 8), size, data, colour_bank);
-        save_png("assets/cato-saved.png", size, &(data[0]), origin);
 
-        SpriteData siphon_sprite(data, colour_bank);
+        siphon_sd = SpriteData(data, colour_bank, true);
+
         // initialize siphon (player) data
         siphon.spriteID = 0;
         siphon.pos.x = PPU466::ScreenWidth / 2;
         siphon.pos.y = PPU466::ScreenHeight / 2;
         siphon.sprite.index = 32;
         siphon.sprite.attributes = 7;
-        ppu.tile_table[siphon.sprite.index] = siphon_sprite.bits;
-        ppu.palette_table[siphon.sprite.attributes] = siphon_sprite.colours;
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits();
+        ppu.palette_table[siphon.sprite.attributes] = siphon_sd.colours;
     }
 
     // projectiles
@@ -123,17 +123,27 @@ void PlayMode::update(float dt)
     background_fade -= std::floor(background_fade);
 
     constexpr float speed = 1.0f;
-    if (left.pressed)
+    if (left.pressed) {
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(0);
         siphon.pos.x -= speed;
-    if (right.pressed)
+    }
+    if (right.pressed) {
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(1);
         siphon.pos.x += speed;
-    if (down.pressed)
+    }
+    if (down.pressed) {
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(2);
         siphon.pos.y -= speed;
-    if (up.pressed)
+    }
+    if (up.pressed) {
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(3);
         siphon.pos.y += speed;
+    }
 
     siphon.pos.x = std::max(1.f, std::min(float(PPU466::ScreenWidth - 8), siphon.pos.x));
     siphon.pos.y = std::max(1.f, std::min(float(PPU466::ScreenHeight - 8), siphon.pos.y));
+
+    // ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(1);
 
     // reset button press counters:
     left.downs = 0;

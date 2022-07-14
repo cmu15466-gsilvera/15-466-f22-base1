@@ -65,6 +65,30 @@ struct PPU466 {
     struct Tile {
         std::array<uint8_t, 8> bit0; //<-- controls bit 0 of the color index
         std::array<uint8_t, 8> bit1; //<-- controls bit 1 of the color index
+        Tile QuadRotate()
+        {
+            // rotate 90 degrees clockwise
+            struct Tile rotated;
+            for (int i = 0; i < 8; i++) {
+                std::cout << "*[";
+                for (int j = 0; j < 8; j++) {
+                    std::cout << int((bit0[i] >> (7 - j)) & 0x1);
+                }
+                std::cout << "]" << std::endl;
+            }
+            std::cout << std::endl;
+            for (int i = 0; i < 8; i++) {
+                std::cout << "[";
+                for (int j = 0; j < 8; j++) {
+                    rotated.bit0[i] |= (bit0[j] & (0x1 << i));
+                    std::cout << int((bit0[j] >> i) & 0x1);
+                    rotated.bit1[i] |= (bit1[j] & (0x1 << i));
+                }
+                std::cout << "]" << std::endl;
+            }
+            std::cout << std::endl;
+            return rotated;
+        }
     };
     static_assert(sizeof(Tile) == 16, "Tile is packed");
 
@@ -143,10 +167,15 @@ struct PPU466 {
 };
 
 struct SpriteData {
-    struct PPU466::Tile bits;
+    SpriteData()
+    {
+    }
+    std::vector<struct PPU466::Tile> bits;
     PPU466::Palette colours;
 
-    SpriteData(const std::vector<glm::u8vec4>& data, const std::vector<glm::u8vec4>& colour_bank)
+    SpriteData(const std::vector<glm::u8vec4>& data,
+        const std::vector<glm::u8vec4>& colour_bank,
+        const bool multidirectional = false)
     {
         assert(data.size() == 8 * 8); // for the size of this sprite
         std::copy_n(colour_bank.begin(), 4, colours.begin()); // get the colours
@@ -162,6 +191,7 @@ struct SpriteData {
 
         // copy over the bits
         {
+            struct PPU466::Tile defaultBits;
             for (size_t i = 0; i < 8; i++) {
                 uint8_t bit0s = 0, bit1s = 0;
                 for (size_t j = 0; j < 8; j++) {
@@ -170,9 +200,24 @@ struct SpriteData {
                     bit0s |= ((col_idx & 0x1) << (7 - j));
                     bit1s |= (((col_idx >> 1) & 0x1) << (7 - j));
                 }
-                bits.bit0[i] = bit0s;
-                bits.bit1[i] = bit1s;
+                defaultBits.bit0[i] = bit0s;
+                defaultBits.bit1[i] = bit1s;
+            }
+            bits.push_back(defaultBits);
+            if (multidirectional) {
+                // add the other 3 sprites
+                auto CW90 = defaultBits.QuadRotate();
+                auto CW180 = CW90.QuadRotate();
+                auto CW270 = CW180.QuadRotate();
+                bits.push_back(CW90);
+                bits.push_back(CW180);
+                bits.push_back(CW270);
             }
         }
+    }
+
+    struct PPU466::Tile GetBits(int idx = 0) const
+    {
+        return bits[idx % bits.size()];
     }
 };

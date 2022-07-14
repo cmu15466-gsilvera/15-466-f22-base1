@@ -50,6 +50,7 @@ struct PlayMode : Mode {
     //----- game state -----
 
     Object siphon;
+    SpriteData siphon_sd;
 
     const int numProjectiles = 5;
     const int background_idx = 0;
