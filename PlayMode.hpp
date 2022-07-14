@@ -17,29 +17,16 @@ struct Siphon : Object {
     const float speed = 50.f;
     bool collisionWith(glm::vec2& otherPos)
     {
-        // otherPos is right of us
-        if (otherPos.x - 4 < pos.x + 4 && otherPos.x + 4 > pos.x + 4) {
-            // otherPos is above us
-            if (otherPos.y - 4 < pos.y + 4 && otherPos.y + 4 > pos.y + 4) {
-                return true;
-            }
-            // otherPos is below us
-            else if (otherPos.y + 4 > pos.y - 4 && otherPos.y - 4 < pos.y - 4) {
-                return true;
-            }
-        }
-        // otherPos is left os us
-        else if (otherPos.x + 4 > pos.x - 4 && otherPos.x - 4 < pos.x - 4) {
-            // otherPos is above us
-            if (otherPos.y - 4 < pos.y + 4 && otherPos.y + 4 > pos.y + 4) {
-                return true;
-            }
-            // otherPos is below us
-            else if (otherPos.y + 4 > pos.y - 4 && otherPos.y - 4 < pos.y - 4) {
-                return true;
-            }
-        }
-        return false;
+        auto isPtIn = [this](const glm::vec2& pt) {
+            bool x_check = (pt.x > this->pos.x - 4 && pt.x < this->pos.x + 4);
+            bool y_check = (pt.y > this->pos.y - 4 && pt.y < this->pos.y + 4);
+            return x_check && y_check;
+        };
+        glm::vec2 topLeft = otherPos + glm::vec2(-4, 4);
+        glm::vec2 bottomLeft = otherPos + glm::vec2(-4, -4);
+        glm::vec2 topRight = otherPos + glm::vec2(4, 4);
+        glm::vec2 bottomRight = otherPos + glm::vec2(4, -4);
+        return isPtIn(topLeft) || isPtIn(bottomLeft) || isPtIn(topRight) || isPtIn(bottomRight);
     }
 };
 
@@ -54,7 +41,7 @@ struct Projectile : Object {
             return glm::vec2(1, 0);
         } else if (direction == 1) { // bottom
             return glm::vec2(0, -1);
-        } else if (direction == 1) { // left
+        } else if (direction == 2) { // left
             return glm::vec2(-1, 0);
         }
         return glm::vec2(0, 1); // up
@@ -104,7 +91,7 @@ struct PlayMode : Mode {
 
     // input tracking:
     struct Button {
-        uint8_t pressed;
+        uint8_t pressed = 0;
     } left, right, down, up, aim_left, aim_right, aim_down, aim_up;
 
     std::vector<std::pair<Button&, int>> key_assignment = {

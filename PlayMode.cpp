@@ -125,21 +125,18 @@ void PlayMode::PlayerUpdate(float dt)
         siphon.vel.y = 0;
     }
     if (aim_left.pressed) {
-        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(2);
-        siphon.aimDirection = 3;
+        siphon.aimDirection = 2;
     }
     if (aim_right.pressed) {
-        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(0);
         siphon.aimDirection = 0;
     }
     if (aim_down.pressed) {
-        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(1);
         siphon.aimDirection = 1;
     }
     if (aim_up.pressed) {
-        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(3);
-        siphon.aimDirection = 2;
+        siphon.aimDirection = 3;
     }
+    ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(siphon.aimDirection);
 
     siphon.pos += dt * siphon.vel;
 
