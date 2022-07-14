@@ -15,11 +15,50 @@ struct Object {
 struct Siphon : Object {
     int aimDirection = 0;
     const float speed = 50.f;
+    bool collisionWith(glm::vec2& otherPos)
+    {
+        // otherPos is right of us
+        if (otherPos.x - 4 < pos.x + 4 && otherPos.x + 4 > pos.x + 4) {
+            // otherPos is above us
+            if (otherPos.y - 4 < pos.y + 4 && otherPos.y + 4 > pos.y + 4) {
+                return true;
+            }
+            // otherPos is below us
+            else if (otherPos.y + 4 > pos.y - 4 && otherPos.y - 4 < pos.y - 4) {
+                return true;
+            }
+        }
+        // otherPos is left os us
+        else if (otherPos.x + 4 > pos.x - 4 && otherPos.x - 4 < pos.x - 4) {
+            // otherPos is above us
+            if (otherPos.y - 4 < pos.y + 4 && otherPos.y + 4 > pos.y + 4) {
+                return true;
+            }
+            // otherPos is below us
+            else if (otherPos.y + 4 > pos.y - 4 && otherPos.y - 4 < pos.y - 4) {
+                return true;
+            }
+        }
+        return false;
+    }
 };
 
 struct Projectile : Object {
     int wall;
     const float speed = 30.f;
+    bool collision = false;
+
+    glm::vec2 directionMapping(int direction)
+    {
+        if (direction == 0) { // right
+            return glm::vec2(1, 0);
+        } else if (direction == 1) { // bottom
+            return glm::vec2(0, -1);
+        } else if (direction == 1) { // left
+            return glm::vec2(-1, 0);
+        }
+        return glm::vec2(0, 1); // up
+    }
 
     void randomInit()
     {
@@ -27,19 +66,19 @@ struct Projectile : Object {
         if (wall == 0) { // right
             pos.x = PPU466::ScreenWidth;
             pos.y = rand() % PPU466::ScreenHeight;
-            vel = speed * glm::vec2(-1, 0);
+            vel = -speed * directionMapping(0);
         } else if (wall == 1) { // bottom
             pos.y = 0;
             pos.x = rand() % PPU466::ScreenHeight;
-            vel = speed * glm::vec2(0, 1);
+            vel = -speed * directionMapping(1);
         } else if (wall == 2) { // left
             pos.x = 0;
             pos.y = rand() % PPU466::ScreenHeight;
-            vel = speed * glm::vec2(1, 0);
+            vel = -speed * directionMapping(2);
         } else { // top
             pos.x = rand() % PPU466::ScreenWidth;
             pos.y = PPU466::ScreenHeight;
-            vel = speed * glm::vec2(0, -1);
+            vel = -speed * directionMapping(3);
         }
     }
 };

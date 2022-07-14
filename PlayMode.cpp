@@ -154,6 +154,13 @@ void PlayMode::ProjectileUpdate(float dt)
         if (p.pos.x < 0 || p.pos.y < 0 || p.pos.x > PPU466::ScreenWidth || p.pos.y > PPU466::ScreenHeight) {
             p.randomInit();
         }
+        if (siphon.collisionWith(p.pos) && !p.collision) {
+            p.collision = true;
+            p.pos = siphon.pos;
+            p.vel = p.speed * p.directionMapping(siphon.aimDirection);
+        } else {
+            p.collision = false;
+        }
     }
 }
 
