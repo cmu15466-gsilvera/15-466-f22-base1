@@ -22,11 +22,13 @@ struct Siphon : Object {
             bool y_check = (pt.y > this->pos.y - 4 && pt.y < this->pos.y + 4);
             return x_check && y_check;
         };
+        // check if the four corners (and the center) are within this sprite area
         glm::vec2 topLeft = otherPos + glm::vec2(-4, 4);
         glm::vec2 bottomLeft = otherPos + glm::vec2(-4, -4);
         glm::vec2 topRight = otherPos + glm::vec2(4, 4);
         glm::vec2 bottomRight = otherPos + glm::vec2(4, -4);
-        return isPtIn(topLeft) || isPtIn(bottomLeft) || isPtIn(topRight) || isPtIn(bottomRight);
+        glm::vec2 center = otherPos; // if both sprites perfectly overlap then the corner float cmp's won't work reliably
+        return isPtIn(center) || isPtIn(topLeft) || isPtIn(bottomLeft) || isPtIn(topRight) || isPtIn(bottomRight);
     }
 };
 

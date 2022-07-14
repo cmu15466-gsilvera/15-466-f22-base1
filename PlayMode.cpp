@@ -151,10 +151,13 @@ void PlayMode::ProjectileUpdate(float dt)
         if (p.pos.x < 0 || p.pos.y < 0 || p.pos.x > PPU466::ScreenWidth || p.pos.y > PPU466::ScreenHeight) {
             p.randomInit();
         }
-        if (siphon.collisionWith(p.pos) && !p.collision) {
+        if (siphon.collisionWith(p.pos)) {
+            if (!p.collision) {
+                // only trigger this effect on the FIRST frame of collision
+                p.pos = siphon.pos;
+                p.vel = p.speed * p.directionMapping(siphon.aimDirection);
+            }
             p.collision = true;
-            p.pos = siphon.pos;
-            p.vel = p.speed * p.directionMapping(siphon.aimDirection);
         } else {
             p.collision = false;
         }
@@ -197,7 +200,6 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
     // projectile sprites
     for (const Projectile& p : projectiles) {
         int i = p.spriteID;
-        // float amt = (i + 2.0f * background_fade) / 62.0f;
         ppu.sprites[i].x = p.pos[0];
         ppu.sprites[i].y = p.pos[1];
         ppu.sprites[i].index = p.sprite.index;
