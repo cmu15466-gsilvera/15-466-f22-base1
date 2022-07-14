@@ -21,9 +21,14 @@ PlayMode::PlayMode()
         glm::uvec2 size;
         std::vector<glm::u8vec4> data;
         OriginLocation origin = OriginLocation::UpperLeftOrigin;
-        load_png("assets/mario.png", &size, &data, origin);
-        std::vector<glm::u8vec4> colour_bank;
-        convert_to_n_colours(4, size, &(data[0]), colour_bank);
+        load_png("assets/siphon.png", &size, &data, origin);
+        std::vector<glm::u8vec4> colour_bank = {
+            glm::u8vec4(0, 0, 0, 0),
+            glm::u8vec4(128, 128, 128, 255),
+            glm::u8vec4(255, 0, 0, 255),
+            glm::u8vec4(0, 0, 0, 0),
+        };
+        // convert_to_n_colours(4, size, &(data[0]), colour_bank);
         convert_to_new_size_with_bank(glm::uvec2(8, 8), size, data, colour_bank);
 
         siphon_sd = SpriteData(data, colour_bank, true);

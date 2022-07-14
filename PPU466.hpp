@@ -173,7 +173,7 @@ struct SpriteData {
                 uint8_t bit0s = 0, bit1s = 0;
                 for (size_t j = 0; j < 8; j++) {
                     // ordering is a bit weird to match the PPU format
-                    const int col_idx = get_col_idx(dataTmp[64 - (i * 8 + j)]);
+                    const int col_idx = get_col_idx(dataTmp[63 - (i * 8 + j)]);
                     bit0s |= ((col_idx & 0x1) << (7 - j));
                     bit1s |= (((col_idx >> 1) & 0x1) << (7 - j));
                 }
@@ -208,6 +208,11 @@ struct SpriteData {
 
     struct PPU466::Tile GetBits(int idx = 0) const
     {
+        if (idx >= bits.size()) {
+            std::cout << "[WARN]"
+                      << "Bits index: " << idx << " out of bounds" << std::endl;
+            idx = bits.size() - 1; // set to max
+        }
         return bits[idx];
     }
 };
