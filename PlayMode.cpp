@@ -66,12 +66,19 @@ PlayMode::PlayMode()
 
     // background
     {
+        const int background_idx = 0;
         ppu.palette_table[background_idx] = {
             glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
             glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
             glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
             glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
         };
+
+        for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
+            for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x) {
+                ppu.background[x + PPU466::BackgroundWidth * y] = background_idx;
+            }
+        }
     }
 }
 
@@ -81,55 +88,73 @@ PlayMode::~PlayMode()
 
 bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
 {
+    bool wasSuccess = false;
     if (evt.type == SDL_KEYDOWN) {
         for (auto& key_action : key_assignment) {
             if (evt.key.keysym.sym == key_action.second) {
                 key_action.first.pressed = true;
-                return true;
+                wasSuccess = true;
             }
         }
     } else if (evt.type == SDL_KEYUP) {
         for (auto& key_action : key_assignment) {
             if (evt.key.keysym.sym == key_action.second) {
                 key_action.first.pressed = false;
-                return true;
+                wasSuccess = true;
             }
         }
     }
 
-    return false;
+    return wasSuccess;
 }
 
 void PlayMode::PlayerUpdate(float dt)
 {
-    const float speed = 1.f;
     if (left.pressed) {
-        siphon.pos.x -= speed;
-    }
-    if (right.pressed) {
-        siphon.pos.x += speed;
+        siphon.vel.x = -siphon.speed;
+    } else if (right.pressed) {
+        siphon.vel.x = +siphon.speed;
+    } else {
+        siphon.vel.x = 0;
     }
     if (down.pressed) {
-        siphon.pos.y -= speed;
-    }
-    if (up.pressed) {
-        siphon.pos.y += speed;
+        siphon.vel.y = -siphon.speed;
+    } else if (up.pressed) {
+        siphon.vel.y = +siphon.speed;
+    } else {
+        siphon.vel.y = 0;
     }
     if (aim_left.pressed) {
         ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(2);
+        siphon.aimDirection = 3;
     }
     if (aim_right.pressed) {
         ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(0);
+        siphon.aimDirection = 0;
     }
     if (aim_down.pressed) {
         ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(1);
+        siphon.aimDirection = 1;
     }
     if (aim_up.pressed) {
         ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(3);
+        siphon.aimDirection = 2;
     }
+
+    siphon.pos += dt * siphon.vel;
 
     siphon.pos.x = std::max(1.f, std::min(float(PPU466::ScreenWidth - 8), siphon.pos.x));
     siphon.pos.y = std::max(1.f, std::min(float(PPU466::ScreenHeight - 8), siphon.pos.y));
+}
+
+void PlayMode::ProjectileUpdate(float dt)
+{
+    for (Projectile& p : projectiles) {
+        p.pos += dt * p.vel;
+        if (p.pos.x < 0 || p.pos.y < 0 || p.pos.x > PPU466::ScreenWidth || p.pos.y > PPU466::ScreenHeight) {
+            p.randomInit();
+        }
+    }
 }
 
 void PlayMode::update(float dt)
@@ -142,12 +167,7 @@ void PlayMode::update(float dt)
 
     PlayerUpdate(dt);
 
-    for (Projectile& p : projectiles) {
-        p.pos += p.vel;
-        if (p.pos.x < 0 || p.pos.y < 0 || p.pos.x > PPU466::ScreenWidth || p.pos.y > PPU466::ScreenHeight) {
-            p.randomInit();
-        }
-    }
+    ProjectileUpdate(dt);
 }
 
 void PlayMode::draw(glm::uvec2 const& drawable_size)
@@ -160,15 +180,6 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
         std::min(255, std::max(0, int32_t(255 * 0.5f * (0.5f + std::sin(2.0f * M_PI * (background_fade + 1.0f / 3.0f)))))),
         std::min(255, std::max(0, int32_t(255 * 0.5f * (0.5f + std::sin(2.0f * M_PI * (background_fade + 2.0f / 3.0f)))))),
         0xff);
-
-    // tilemap gets recomputed every frame as some weird plasma thing:
-    // NOTE: don't do this in your game! actually make a map or something :-)
-    for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
-        for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x) {
-            // TODO: make weird plasma thing
-            ppu.background[x + PPU466::BackgroundWidth * y] = background_idx;
-        }
-    }
 
     // background scroll:
     // ppu.background_position.x = int32_t(-0.5f * siphon.x);

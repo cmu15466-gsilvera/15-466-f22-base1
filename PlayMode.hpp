@@ -14,10 +14,12 @@ struct Object {
 
 struct Siphon : Object {
     int aimDirection = 0;
+    const float speed = 50.f;
 };
 
 struct Projectile : Object {
     int wall;
+    const float speed = 30.f;
 
     void randomInit()
     {
@@ -25,19 +27,19 @@ struct Projectile : Object {
         if (wall == 0) { // right
             pos.x = PPU466::ScreenWidth;
             pos.y = rand() % PPU466::ScreenHeight;
-            vel = glm::vec2(-1, 0);
+            vel = speed * glm::vec2(-1, 0);
         } else if (wall == 1) { // bottom
             pos.y = 0;
             pos.x = rand() % PPU466::ScreenHeight;
-            vel = glm::vec2(0, 1);
+            vel = speed * glm::vec2(0, 1);
         } else if (wall == 2) { // left
             pos.x = 0;
             pos.y = rand() % PPU466::ScreenHeight;
-            vel = glm::vec2(1, 0);
+            vel = speed * glm::vec2(1, 0);
         } else { // top
             pos.x = rand() % PPU466::ScreenWidth;
             pos.y = PPU466::ScreenHeight;
-            vel = glm::vec2(0, -1);
+            vel = speed * glm::vec2(0, -1);
         }
     }
 };
@@ -53,13 +55,13 @@ struct PlayMode : Mode {
 
     //----- game state -----
 
-    Object siphon;
+    Siphon siphon;
     SpriteData siphon_sd;
     void PlayerUpdate(float dt);
 
     const int numProjectiles = 5;
-    const int background_idx = 0;
     std::vector<Projectile> projectiles;
+    void ProjectileUpdate(float dt);
 
     // input tracking:
     struct Button {
