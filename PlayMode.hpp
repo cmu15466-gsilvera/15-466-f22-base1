@@ -12,6 +12,10 @@ struct Object {
     PPU466::Sprite sprite;
 };
 
+struct Siphon : Object {
+    int aimDirection = 0;
+};
+
 struct Projectile : Object {
     int wall;
 
@@ -51,6 +55,7 @@ struct PlayMode : Mode {
 
     Object siphon;
     SpriteData siphon_sd;
+    void PlayerUpdate(float dt);
 
     const int numProjectiles = 5;
     const int background_idx = 0;
@@ -58,9 +63,19 @@ struct PlayMode : Mode {
 
     // input tracking:
     struct Button {
-        uint8_t downs = 0;
-        uint8_t pressed = 0;
-    } left, right, down, up;
+        uint8_t pressed;
+    } left, right, down, up, aim_left, aim_right, aim_down, aim_up;
+
+    std::vector<std::pair<Button&, int>> key_assignment = {
+        { aim_left, SDLK_LEFT },
+        { aim_right, SDLK_RIGHT },
+        { aim_up, SDLK_UP },
+        { aim_down, SDLK_DOWN },
+        { left, SDLK_a },
+        { right, SDLK_d },
+        { up, SDLK_w },
+        { down, SDLK_s },
+    };
 
     // some weird background animation:
     float background_fade = 0.0f;

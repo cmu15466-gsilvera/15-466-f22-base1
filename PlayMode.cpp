@@ -81,42 +81,55 @@ PlayMode::~PlayMode()
 
 bool PlayMode::handle_event(SDL_Event const& evt, glm::uvec2 const& window_size)
 {
-
     if (evt.type == SDL_KEYDOWN) {
-        if (evt.key.keysym.sym == SDLK_LEFT) {
-            left.downs += 1;
-            left.pressed = true;
-            return true;
-        } else if (evt.key.keysym.sym == SDLK_RIGHT) {
-            right.downs += 1;
-            right.pressed = true;
-            return true;
-        } else if (evt.key.keysym.sym == SDLK_UP) {
-            up.downs += 1;
-            up.pressed = true;
-            return true;
-        } else if (evt.key.keysym.sym == SDLK_DOWN) {
-            down.downs += 1;
-            down.pressed = true;
-            return true;
+        for (auto& key_action : key_assignment) {
+            if (evt.key.keysym.sym == key_action.second) {
+                key_action.first.pressed = true;
+                return true;
+            }
         }
     } else if (evt.type == SDL_KEYUP) {
-        if (evt.key.keysym.sym == SDLK_LEFT) {
-            left.pressed = false;
-            return true;
-        } else if (evt.key.keysym.sym == SDLK_RIGHT) {
-            right.pressed = false;
-            return true;
-        } else if (evt.key.keysym.sym == SDLK_UP) {
-            up.pressed = false;
-            return true;
-        } else if (evt.key.keysym.sym == SDLK_DOWN) {
-            down.pressed = false;
-            return true;
+        for (auto& key_action : key_assignment) {
+            if (evt.key.keysym.sym == key_action.second) {
+                key_action.first.pressed = false;
+                return true;
+            }
         }
     }
 
     return false;
+}
+
+void PlayMode::PlayerUpdate(float dt)
+{
+    const float speed = 1.f;
+    if (left.pressed) {
+        siphon.pos.x -= speed;
+    }
+    if (right.pressed) {
+        siphon.pos.x += speed;
+    }
+    if (down.pressed) {
+        siphon.pos.y -= speed;
+    }
+    if (up.pressed) {
+        siphon.pos.y += speed;
+    }
+    if (aim_left.pressed) {
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(2);
+    }
+    if (aim_right.pressed) {
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(0);
+    }
+    if (aim_down.pressed) {
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(1);
+    }
+    if (aim_up.pressed) {
+        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(3);
+    }
+
+    siphon.pos.x = std::max(1.f, std::min(float(PPU466::ScreenWidth - 8), siphon.pos.x));
+    siphon.pos.y = std::max(1.f, std::min(float(PPU466::ScreenHeight - 8), siphon.pos.y));
 }
 
 void PlayMode::update(float dt)
@@ -127,34 +140,7 @@ void PlayMode::update(float dt)
     background_fade += dt / 10.0f;
     background_fade -= std::floor(background_fade);
 
-    constexpr float speed = 1.0f;
-    if (left.pressed) {
-        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(2);
-        siphon.pos.x -= speed;
-    }
-    if (right.pressed) {
-        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(0);
-        siphon.pos.x += speed;
-    }
-    if (down.pressed) {
-        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(1);
-        siphon.pos.y -= speed;
-    }
-    if (up.pressed) {
-        ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(3);
-        siphon.pos.y += speed;
-    }
-
-    siphon.pos.x = std::max(1.f, std::min(float(PPU466::ScreenWidth - 8), siphon.pos.x));
-    siphon.pos.y = std::max(1.f, std::min(float(PPU466::ScreenHeight - 8), siphon.pos.y));
-
-    // ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits(1);
-
-    // reset button press counters:
-    left.downs = 0;
-    right.downs = 0;
-    up.downs = 0;
-    down.downs = 0;
+    PlayerUpdate(dt);
 
     for (Projectile& p : projectiles) {
         p.pos += p.vel;
