@@ -15,8 +15,9 @@
 // colour indexes
 #define CLEAR_COLOUR 0
 #define BACKGROUND_COLOUR 1
-#define PROJECTILE_COLOUR 5
-#define TARGET_COLOUR 6
+#define PROJECTILE_COLOUR 4
+#define TARGET_COLOUR 5
+#define EVIL_TARGET_COLOUR 6
 #define SIPHON_COLOUR 7
 
 // sprite indexes
@@ -135,6 +136,39 @@ PlayMode::PlayMode()
         }
     }
 
+    // evil targets
+    {
+        evilTargets.reserve(numEvilTargets);
+        // load png
+        glm::uvec2 size;
+        std::vector<glm::u8vec4> data;
+        load_png("assets/target.png", &size, &data);
+        std::vector<glm::u8vec4> colour_bank = {
+            glm::u8vec4(0, 0, 0, 0),
+            glm::u8vec4(255, 0, 255, 255),
+            glm::u8vec4(255, 255, 255, 255),
+            glm::u8vec4(0, 0, 0, 0),
+        };
+        convert_to_new_size_with_bank(glm::uvec2(8, 8), size, data, colour_bank);
+
+        SpriteData target_sd = SpriteData(data, colour_bank, false);
+        // colours used for the misc other sprites:
+        ppu.palette_table[EVIL_TARGET_COLOUR] = target_sd.colours;
+        ppu.tile_table[TARGET_SPRITE_IDX] = target_sd.GetBits();
+
+        for (size_t i = 0; i < numEvilTargets; i++) {
+            MovingObject newTarget;
+            newTarget.speed = 20.f;
+            newTarget.spriteID = globalSpriteIndex;
+            globalSpriteIndex++;
+            newTarget.sprite.index = TARGET_SPRITE_IDX;
+            newTarget.sprite.attributes = EVIL_TARGET_COLOUR;
+            newTarget.randomInit();
+            newTarget.hide(3 + rand() % 3);
+            evilTargets.push_back(newTarget);
+        }
+    }
+
     // background
     {
         ppu.palette_table[BACKGROUND_COLOUR] = {
@@ -248,7 +282,20 @@ void PlayMode::TargetsUpdate(float dt)
                 t.hide(5); // hide this target for the next 5s
                 p.hide(2); // hide this projectile for the next 2s
                 score++;
-                std::cout << "Score: " << score << std::endl;
+                std::cout << "[GOOD] Score: " << score << std::endl;
+            }
+        }
+    }
+
+    for (MovingObject& t : evilTargets) {
+        // make the edge respawn wait for a bit before respawning
+        t.update(dt);
+        for (MovingObject& p : projectiles) {
+            if (p.collisionWith(t)) {
+                t.hide(5); // hide this target for the next 5s
+                p.hide(2); // hide this projectile for the next 2s
+                score = std::max(0, score - 5);
+                std::cout << "[EVIL] Score: " << score << std::endl;
             }
         }
     }
@@ -296,6 +343,12 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
     }
 
     for (const MovingObject& t : targets) {
+        t.updatePPU(ppu);
+        // if (i % 2)
+        //     ppu.sprites[i].attributes |= 0x80; //'behind' bit
+    }
+
+    for (const MovingObject& t : evilTargets) {
         t.updatePPU(ppu);
         // if (i % 2)
         //     ppu.sprites[i].attributes |= 0x80; //'behind' bit

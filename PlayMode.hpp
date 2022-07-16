@@ -46,6 +46,11 @@ struct Object {
         return isPtIn(center) || isPtIn(topLeft) || isPtIn(bottomLeft) || isPtIn(topRight) || isPtIn(bottomRight);
     }
 
+    bool atEdge() const
+    {
+        return (pos.x < 0 || pos.y < 0 || pos.x > PPU466::ScreenWidth || pos.y > PPU466::ScreenHeight);
+    }
+
     void update(float dt)
     {
         pos += dt * vel;
@@ -88,8 +93,7 @@ struct MovingObject : Object {
     {
         Object::update(dt);
         // reinitialize the location once they reach the edge
-        bool atEdge = (pos.x < 0 || pos.y < 0 || pos.x > PPU466::ScreenWidth || pos.y > PPU466::ScreenHeight);
-        if (bIsEnabled && atEdge) {
+        if (bIsEnabled && atEdge()) {
             randomInit();
         }
     }
@@ -98,20 +102,20 @@ struct MovingObject : Object {
     {
         wall = rand() % 4;
         if (wall == 0) { // right
-            pos.x = PPU466::ScreenWidth;
-            pos.y = rand() % PPU466::ScreenHeight;
+            pos.x = PPU466::ScreenWidth - 8;
+            pos.y = rand() % PPU466::ScreenHeight - 8;
             vel = -speed * directionMapping(0);
         } else if (wall == 1) { // bottom
-            pos.y = 0;
-            pos.x = rand() % PPU466::ScreenHeight;
+            pos.y = 8;
+            pos.x = rand() % PPU466::ScreenHeight - 8;
             vel = -speed * directionMapping(1);
         } else if (wall == 2) { // left
-            pos.x = 0;
-            pos.y = rand() % PPU466::ScreenHeight;
+            pos.x = 8;
+            pos.y = rand() % PPU466::ScreenHeight - 8;
             vel = -speed * directionMapping(2);
         } else { // top
-            pos.x = rand() % PPU466::ScreenWidth;
-            pos.y = PPU466::ScreenHeight;
+            pos.x = rand() % PPU466::ScreenWidth - 8;
+            pos.y = PPU466::ScreenHeight - 8;
             vel = -speed * directionMapping(3);
         }
     }
@@ -127,7 +131,7 @@ struct PlayMode : Mode {
     virtual void draw(glm::uvec2 const& drawable_size) override;
 
     //----- game state -----
-    size_t score = 0;
+    int score = 0;
 
     Siphon siphon;
     SpriteData siphon_sd;
@@ -140,6 +144,9 @@ struct PlayMode : Mode {
     const int numTargets = 3;
     std::vector<MovingObject> targets;
     void TargetsUpdate(float dt);
+
+    const int numEvilTargets = 1;
+    std::vector<MovingObject> evilTargets;
 
     // input tracking:
     struct Button {
