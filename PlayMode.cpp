@@ -12,6 +12,19 @@
 #include <algorithm> // std::clamp
 #include <random>
 
+// colour indexes
+#define CLEAR_COLOUR 0
+#define BACKGROUND_COLOUR 1
+#define PROJECTILE_COLOUR 5
+#define TARGET_COLOUR 6
+#define SIPHON_COLOUR 7
+
+// sprite indexes
+#define SIPHON_SPRITE_IDX 32
+#define PROJECTILE_SPRITE_IDX_0 33
+#define PROJECTILE_SPRITE_IDX_1 34
+#define TARGET_SPRITE_IDX 35
+
 PlayMode::PlayMode()
 {
 
@@ -20,7 +33,7 @@ PlayMode::PlayMode()
     // meta stuff
     {
         // attribute 0 is undrawn
-        ppu.palette_table[1] = {
+        ppu.palette_table[CLEAR_COLOUR] = {
             glm::u8vec4(0, 0, 0, 0),
             glm::u8vec4(0, 0, 0, 0),
             glm::u8vec4(0, 0, 0, 0),
@@ -47,11 +60,12 @@ PlayMode::PlayMode()
 
         // initialize siphon (player) data
         siphon.spriteID = globalSpriteIndex;
+        siphon.speed = 80.f;
         globalSpriteIndex++;
         siphon.pos.x = PPU466::ScreenWidth / 2;
         siphon.pos.y = PPU466::ScreenHeight / 2;
-        siphon.sprite.index = 32;
-        siphon.sprite.attributes = 7;
+        siphon.sprite.index = SIPHON_SPRITE_IDX;
+        siphon.sprite.attributes = SIPHON_COLOUR;
         ppu.tile_table[siphon.sprite.index] = siphon_sd.GetBits();
         ppu.palette_table[siphon.sprite.attributes] = siphon_sd.colours;
     }
@@ -59,7 +73,6 @@ PlayMode::PlayMode()
     // projectiles
     {
         projectiles.reserve(numProjectiles);
-        const int colour_idx = 6;
         // load png
         glm::uvec2 size;
         std::vector<glm::u8vec4> data;
@@ -74,16 +87,17 @@ PlayMode::PlayMode()
 
         SpriteData projectile_sd = SpriteData(data, colour_bank, true);
         // colours used for the misc other sprites:
-        ppu.palette_table[colour_idx] = projectile_sd.colours;
-        ppu.tile_table[33] = projectile_sd.GetBits(0);
-        ppu.tile_table[34] = projectile_sd.GetBits(1); // rotated 90 deg (horizontal)
+        ppu.palette_table[PROJECTILE_COLOUR] = projectile_sd.colours;
+        ppu.tile_table[PROJECTILE_SPRITE_IDX_0] = projectile_sd.GetBits(0);
+        ppu.tile_table[PROJECTILE_SPRITE_IDX_1] = projectile_sd.GetBits(1); // rotated 90 deg (horizontal)
 
         for (size_t i = 0; i < numProjectiles; i++) {
             MovingObject newProj;
+            newProj.speed = 50.f;
             newProj.spriteID = globalSpriteIndex;
             globalSpriteIndex++;
-            newProj.sprite.index = 33;
-            newProj.sprite.attributes = colour_idx;
+            newProj.sprite.index = PROJECTILE_SPRITE_IDX_0;
+            newProj.sprite.attributes = PROJECTILE_COLOUR;
             newProj.randomInit();
             projectiles.push_back(newProj);
         }
@@ -92,7 +106,6 @@ PlayMode::PlayMode()
     // targets
     {
         targets.reserve(numTargets);
-        const int colour_idx = 3;
         // load png
         glm::uvec2 size;
         std::vector<glm::u8vec4> data;
@@ -107,16 +120,16 @@ PlayMode::PlayMode()
 
         SpriteData target_sd = SpriteData(data, colour_bank, false);
         // colours used for the misc other sprites:
-        ppu.palette_table[colour_idx] = target_sd.colours;
-        ppu.tile_table[35] = target_sd.GetBits();
+        ppu.palette_table[TARGET_COLOUR] = target_sd.colours;
+        ppu.tile_table[TARGET_SPRITE_IDX] = target_sd.GetBits();
 
         for (size_t i = 0; i < numTargets; i++) {
             MovingObject newTarget;
+            newTarget.speed = 30.f;
             newTarget.spriteID = globalSpriteIndex;
             globalSpriteIndex++;
-            newTarget.speed = 60.f;
-            newTarget.sprite.index = 35;
-            newTarget.sprite.attributes = colour_idx;
+            newTarget.sprite.index = TARGET_SPRITE_IDX;
+            newTarget.sprite.attributes = TARGET_COLOUR;
             newTarget.randomInit();
             targets.push_back(newTarget);
         }
@@ -124,17 +137,17 @@ PlayMode::PlayMode()
 
     // background
     {
-        const int background_idx = 0;
-        ppu.palette_table[background_idx] = {
-            glm::u8vec4(0x01, 0x01, 0x01, 0xFF),
-            glm::u8vec4(0x01, 0x01, 0x01, 0xFF),
-            glm::u8vec4(0x01, 0x01, 0x01, 0xFF),
-            glm::u8vec4(0x01, 0x01, 0x01, 0xFF),
+        ppu.palette_table[BACKGROUND_COLOUR] = {
+            glm::u8vec4(0x11, 0x11, 0x11, 0xff),
+            glm::u8vec4(0x11, 0x11, 0x11, 0xff),
+            glm::u8vec4(0x11, 0x11, 0x99, 0xff),
+            glm::u8vec4(0xff, 0xff, 0x11, 0xff),
         };
 
         for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
             for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x) {
-                ppu.background[x + PPU466::BackgroundWidth * y] = background_idx;
+                int bkg_idx = SIPHON_SPRITE_IDX;
+                ppu.background[x + PPU466::BackgroundWidth * y] = (BACKGROUND_COLOUR << 8) | bkg_idx;
             }
         }
     }
@@ -207,9 +220,9 @@ void PlayMode::ProjectileUpdate(float dt)
     for (MovingObject& p : projectiles) {
         // change the sprite based on velocity (heading direction)
         if (p.vel.y != 0) {
-            p.sprite.index = 33;
+            p.sprite.index = PROJECTILE_SPRITE_IDX_0;
         } else {
-            p.sprite.index = 34;
+            p.sprite.index = PROJECTILE_SPRITE_IDX_1;
         }
         p.update(dt);
         // check for collisions with player
@@ -234,7 +247,8 @@ void PlayMode::TargetsUpdate(float dt)
             if (p.collisionWith(t)) {
                 t.hide(5); // hide this target for the next 5s
                 p.hide(2); // hide this projectile for the next 2s
-                // score++;
+                score++;
+                std::cout << "Score: " << score << std::endl;
             }
         }
     }
@@ -267,8 +281,7 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
         0xff);
 
     // background scroll:
-    // ppu.background_position.x = int32_t(-0.5f * siphon.x);
-    // ppu.background_position.y = int32_t(-0.5f * siphon.y);
+    ppu.background_position += MovingObject::directionMapping(siphon.aimDirection);
 
     // player sprite:
     siphon.sprite.x = siphon.pos.x;

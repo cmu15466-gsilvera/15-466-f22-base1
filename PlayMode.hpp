@@ -11,6 +11,7 @@ struct Object {
     glm::vec2 pos, vel;
     PPU466::Sprite sprite;
     bool bIsEnabled = true;
+    float speed = 30.f;
     float hiddenDuration = 0.f;
 
     void updatePPU(PPU466& ppu) const
@@ -65,15 +66,13 @@ struct Object {
 
 struct Siphon : Object {
     int aimDirection = 0;
-    const float speed = 50.f;
 };
 
 struct MovingObject : Object {
     int wall;
-    float speed = 30.f;
     bool collision = false;
 
-    glm::vec2 directionMapping(int direction)
+    static glm::vec2 directionMapping(int direction)
     {
         if (direction == 0) { // right
             return glm::vec2(1, 0);
@@ -128,6 +127,7 @@ struct PlayMode : Mode {
     virtual void draw(glm::uvec2 const& drawable_size) override;
 
     //----- game state -----
+    size_t score = 0;
 
     Siphon siphon;
     SpriteData siphon_sd;
@@ -137,7 +137,7 @@ struct PlayMode : Mode {
     std::vector<MovingObject> projectiles;
     void ProjectileUpdate(float dt);
 
-    const int numTargets = 2;
+    const int numTargets = 3;
     std::vector<MovingObject> targets;
     void TargetsUpdate(float dt);
 
