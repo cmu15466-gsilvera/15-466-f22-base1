@@ -16,6 +16,18 @@ PlayMode::PlayMode()
 {
 
     int globalSpriteIndex = 0; // increases with every new sprite
+
+    // meta stuff
+    {
+        // attribute 0 is undrawn
+        ppu.palette_table[1] = {
+            glm::u8vec4(0, 0, 0, 0),
+            glm::u8vec4(0, 0, 0, 0),
+            glm::u8vec4(0, 0, 0, 0),
+            glm::u8vec4(0, 0, 0, 0),
+        };
+    }
+
     // main character
     {
         // load png
@@ -201,7 +213,7 @@ void PlayMode::ProjectileUpdate(float dt)
         }
         p.update(dt);
         // check for collisions with player
-        if (siphon.collisionWith(p.pos)) {
+        if (siphon.collisionWith(p)) {
             if (!p.collision) {
                 // only trigger this effect on the FIRST frame of collision
                 p.pos = siphon.pos;
@@ -218,6 +230,13 @@ void PlayMode::TargetsUpdate(float dt)
 {
     for (MovingObject& t : targets) {
         t.update(dt);
+        for (MovingObject& p : projectiles) {
+            if (p.collisionWith(t)) {
+                t.hide(5); // hide this target for the next 5s
+                p.hide(2); // hide this projectile for the next 2s
+                // score++;
+            }
+        }
     }
 }
 
@@ -258,21 +277,13 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
 
     // projectile sprites
     for (const MovingObject& p : projectiles) {
-        int i = p.spriteID;
-        ppu.sprites[i].x = p.pos[0];
-        ppu.sprites[i].y = p.pos[1];
-        ppu.sprites[i].index = p.sprite.index;
-        ppu.sprites[i].attributes = p.sprite.attributes;
+        p.updatePPU(ppu);
         // if (i % 2)
         //     ppu.sprites[i].attributes |= 0x80; //'behind' bit
     }
 
     for (const MovingObject& t : targets) {
-        int i = t.spriteID;
-        ppu.sprites[i].x = t.pos[0];
-        ppu.sprites[i].y = t.pos[1];
-        ppu.sprites[i].index = t.sprite.index;
-        ppu.sprites[i].attributes = t.sprite.attributes;
+        t.updatePPU(ppu);
         // if (i % 2)
         //     ppu.sprites[i].attributes |= 0x80; //'behind' bit
     }

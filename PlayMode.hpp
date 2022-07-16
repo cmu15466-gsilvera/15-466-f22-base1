@@ -10,13 +10,27 @@ struct Object {
     int spriteID;
     glm::vec2 pos, vel;
     PPU466::Sprite sprite;
-};
+    bool bIsEnabled = true;
+    float hiddenDuration = 0.f;
 
-struct Siphon : Object {
-    int aimDirection = 0;
-    const float speed = 50.f;
-    bool collisionWith(glm::vec2& otherPos)
+    void updatePPU(PPU466& ppu) const
     {
+        ppu.sprites[spriteID].x = pos[0];
+        ppu.sprites[spriteID].y = pos[1];
+        ppu.sprites[spriteID].index = sprite.index;
+        if (bIsEnabled) {
+            ppu.sprites[spriteID].attributes = sprite.attributes;
+        } else {
+            ppu.sprites[spriteID].attributes = 1;
+        }
+    }
+
+    bool collisionWith(const Object& other) const
+    {
+        if (!(bIsEnabled && other.bIsEnabled)) {
+            return false;
+        }
+        const glm::vec2& otherPos = other.pos;
         auto isPtIn = [this](const glm::vec2& pt) {
             bool x_check = (pt.x > this->pos.x - 4 && pt.x < this->pos.x + 4);
             bool y_check = (pt.y > this->pos.y - 4 && pt.y < this->pos.y + 4);
@@ -30,6 +44,28 @@ struct Siphon : Object {
         glm::vec2 center = otherPos; // if both sprites perfectly overlap then the corner float cmp's won't work reliably
         return isPtIn(center) || isPtIn(topLeft) || isPtIn(bottomLeft) || isPtIn(topRight) || isPtIn(bottomRight);
     }
+
+    void update(float dt)
+    {
+        pos += dt * vel;
+        hiddenDuration -= dt;
+        if (hiddenDuration > 0) {
+            pos = glm::vec2(-1, -1); // trigger a reinit after unhidden
+            bIsEnabled = false;
+        } else {
+            bIsEnabled = true;
+        }
+    }
+
+    void hide(float duration)
+    {
+        hiddenDuration = duration;
+    }
+};
+
+struct Siphon : Object {
+    int aimDirection = 0;
+    const float speed = 50.f;
 };
 
 struct MovingObject : Object {
@@ -51,9 +87,10 @@ struct MovingObject : Object {
 
     void update(float dt)
     {
-        pos += dt * vel;
+        Object::update(dt);
         // reinitialize the location once they reach the edge
-        if (pos.x < 0 || pos.y < 0 || pos.x > PPU466::ScreenWidth || pos.y > PPU466::ScreenHeight) {
+        bool atEdge = (pos.x < 0 || pos.y < 0 || pos.x > PPU466::ScreenWidth || pos.y > PPU466::ScreenHeight);
+        if (bIsEnabled && atEdge) {
             randomInit();
         }
     }
