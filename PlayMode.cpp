@@ -12,20 +12,6 @@
 #include <algorithm> // std::clamp
 #include <random>
 
-// colour indexes
-#define CLEAR_COLOUR 0
-#define BACKGROUND_COLOUR 1
-#define PROJECTILE_COLOUR 4
-#define TARGET_COLOUR 5
-#define EVIL_TARGET_COLOUR 6
-#define SIPHON_COLOUR 7
-
-// sprite indexes
-#define SIPHON_SPRITE_IDX 32
-#define PROJECTILE_SPRITE_IDX_0 33
-#define PROJECTILE_SPRITE_IDX_1 34
-#define TARGET_SPRITE_IDX 35
-
 PlayMode::PlayMode()
 {
 
