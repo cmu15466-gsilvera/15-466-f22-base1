@@ -32,9 +32,9 @@ struct Siphon : Object {
     }
 };
 
-struct Projectile : Object {
+struct MovingObject : Object {
     int wall;
-    const float speed = 30.f;
+    float speed = 30.f;
     bool collision = false;
 
     glm::vec2 directionMapping(int direction)
@@ -47,6 +47,15 @@ struct Projectile : Object {
             return glm::vec2(-1, 0);
         }
         return glm::vec2(0, 1); // up
+    }
+
+    void update(float dt)
+    {
+        pos += dt * vel;
+        // reinitialize the location once they reach the edge
+        if (pos.x < 0 || pos.y < 0 || pos.x > PPU466::ScreenWidth || pos.y > PPU466::ScreenHeight) {
+            randomInit();
+        }
     }
 
     void randomInit()
@@ -87,9 +96,13 @@ struct PlayMode : Mode {
     SpriteData siphon_sd;
     void PlayerUpdate(float dt);
 
-    const int numProjectiles = 50;
-    std::vector<Projectile> projectiles;
+    const int numProjectiles = 5;
+    std::vector<MovingObject> projectiles;
     void ProjectileUpdate(float dt);
+
+    const int numTargets = 2;
+    std::vector<MovingObject> targets;
+    void TargetsUpdate(float dt);
 
     // input tracking:
     struct Button {

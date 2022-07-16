@@ -15,13 +15,13 @@
 PlayMode::PlayMode()
 {
 
+    int globalSpriteIndex = 0; // increases with every new sprite
     // main character
     {
         // load png
         glm::uvec2 size;
         std::vector<glm::u8vec4> data;
-        OriginLocation origin = OriginLocation::UpperLeftOrigin;
-        load_png("assets/siphon.png", &size, &data, origin);
+        load_png("assets/siphon.png", &size, &data);
         std::vector<glm::u8vec4> colour_bank = {
             glm::u8vec4(0, 0, 0, 0),
             glm::u8vec4(128, 128, 128, 255),
@@ -34,7 +34,8 @@ PlayMode::PlayMode()
         siphon_sd = SpriteData(data, colour_bank, true);
 
         // initialize siphon (player) data
-        siphon.spriteID = 0;
+        siphon.spriteID = globalSpriteIndex;
+        globalSpriteIndex++;
         siphon.pos.x = PPU466::ScreenWidth / 2;
         siphon.pos.y = PPU466::ScreenHeight / 2;
         siphon.sprite.index = 32;
@@ -50,8 +51,7 @@ PlayMode::PlayMode()
         // load png
         glm::uvec2 size;
         std::vector<glm::u8vec4> data;
-        OriginLocation origin = OriginLocation::UpperLeftOrigin;
-        load_png("assets/bolt.png", &size, &data, origin);
+        load_png("assets/bolt.png", &size, &data);
         std::vector<glm::u8vec4> colour_bank = {
             glm::u8vec4(0, 0, 0, 0),
             glm::u8vec4(255, 255, 0, 255),
@@ -67,8 +67,9 @@ PlayMode::PlayMode()
         ppu.tile_table[34] = projectile_sd.GetBits(1); // rotated 90 deg (horizontal)
 
         for (size_t i = 0; i < numProjectiles; i++) {
-            Projectile newProj;
-            newProj.spriteID = i + 1;
+            MovingObject newProj;
+            newProj.spriteID = globalSpriteIndex;
+            globalSpriteIndex++;
             newProj.sprite.index = 33;
             newProj.sprite.attributes = colour_idx;
             newProj.randomInit();
@@ -76,14 +77,47 @@ PlayMode::PlayMode()
         }
     }
 
+    // targets
+    {
+        targets.reserve(numTargets);
+        const int colour_idx = 3;
+        // load png
+        glm::uvec2 size;
+        std::vector<glm::u8vec4> data;
+        load_png("assets/target.png", &size, &data);
+        std::vector<glm::u8vec4> colour_bank = {
+            glm::u8vec4(0, 0, 0, 0),
+            glm::u8vec4(255, 0, 0, 255),
+            glm::u8vec4(255, 255, 255, 255),
+            glm::u8vec4(0, 0, 0, 0),
+        };
+        convert_to_new_size_with_bank(glm::uvec2(8, 8), size, data, colour_bank);
+
+        SpriteData target_sd = SpriteData(data, colour_bank, false);
+        // colours used for the misc other sprites:
+        ppu.palette_table[colour_idx] = target_sd.colours;
+        ppu.tile_table[35] = target_sd.GetBits();
+
+        for (size_t i = 0; i < numTargets; i++) {
+            MovingObject newTarget;
+            newTarget.spriteID = globalSpriteIndex;
+            globalSpriteIndex++;
+            newTarget.speed = 60.f;
+            newTarget.sprite.index = 35;
+            newTarget.sprite.attributes = colour_idx;
+            newTarget.randomInit();
+            targets.push_back(newTarget);
+        }
+    }
+
     // background
     {
         const int background_idx = 0;
         ppu.palette_table[background_idx] = {
-            glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
-            glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
-            glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
-            glm::u8vec4(0x55, 0x55, 0x55, 0xFF),
+            glm::u8vec4(0x01, 0x01, 0x01, 0xFF),
+            glm::u8vec4(0x01, 0x01, 0x01, 0xFF),
+            glm::u8vec4(0x01, 0x01, 0x01, 0xFF),
+            glm::u8vec4(0x01, 0x01, 0x01, 0xFF),
         };
 
         for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
@@ -158,18 +192,14 @@ void PlayMode::PlayerUpdate(float dt)
 
 void PlayMode::ProjectileUpdate(float dt)
 {
-    for (Projectile& p : projectiles) {
-        p.pos += dt * p.vel;
+    for (MovingObject& p : projectiles) {
         // change the sprite based on velocity (heading direction)
         if (p.vel.y != 0) {
             p.sprite.index = 33;
         } else {
             p.sprite.index = 34;
         }
-        // reinitialize the location once they reach the edge
-        if (p.pos.x < 0 || p.pos.y < 0 || p.pos.x > PPU466::ScreenWidth || p.pos.y > PPU466::ScreenHeight) {
-            p.randomInit();
-        }
+        p.update(dt);
         // check for collisions with player
         if (siphon.collisionWith(p.pos)) {
             if (!p.collision) {
@@ -184,6 +214,13 @@ void PlayMode::ProjectileUpdate(float dt)
     }
 }
 
+void PlayMode::TargetsUpdate(float dt)
+{
+    for (MovingObject& t : targets) {
+        t.update(dt);
+    }
+}
+
 void PlayMode::update(float dt)
 {
 
@@ -195,6 +232,8 @@ void PlayMode::update(float dt)
     PlayerUpdate(dt);
 
     ProjectileUpdate(dt);
+
+    TargetsUpdate(dt);
 }
 
 void PlayMode::draw(glm::uvec2 const& drawable_size)
@@ -218,12 +257,22 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
     ppu.sprites[siphon.spriteID] = siphon.sprite;
 
     // projectile sprites
-    for (const Projectile& p : projectiles) {
+    for (const MovingObject& p : projectiles) {
         int i = p.spriteID;
         ppu.sprites[i].x = p.pos[0];
         ppu.sprites[i].y = p.pos[1];
         ppu.sprites[i].index = p.sprite.index;
         ppu.sprites[i].attributes = p.sprite.attributes;
+        // if (i % 2)
+        //     ppu.sprites[i].attributes |= 0x80; //'behind' bit
+    }
+
+    for (const MovingObject& t : targets) {
+        int i = t.spriteID;
+        ppu.sprites[i].x = t.pos[0];
+        ppu.sprites[i].y = t.pos[1];
+        ppu.sprites[i].index = t.sprite.index;
+        ppu.sprites[i].attributes = t.sprite.attributes;
         // if (i % 2)
         //     ppu.sprites[i].attributes |= 0x80; //'behind' bit
     }
