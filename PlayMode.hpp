@@ -87,7 +87,7 @@ struct PlayMode : Mode {
     SpriteData siphon_sd;
     void PlayerUpdate(float dt);
 
-    const int numProjectiles = 5;
+    const int numProjectiles = 50;
     std::vector<Projectile> projectiles;
     void ProjectileUpdate(float dt);
 

@@ -46,19 +46,31 @@ PlayMode::PlayMode()
     // projectiles
     {
         projectiles.reserve(numProjectiles);
-        const int proj_idx = 6;
-        // colours used for the misc other sprites:
-        ppu.palette_table[proj_idx] = {
-            glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-            glm::u8vec4(0x88, 0x88, 0xff, 0xff),
-            glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-            glm::u8vec4(0x00, 0x00, 0x00, 0x00),
+        const int colour_idx = 6;
+        // load png
+        glm::uvec2 size;
+        std::vector<glm::u8vec4> data;
+        OriginLocation origin = OriginLocation::UpperLeftOrigin;
+        load_png("assets/bolt.png", &size, &data, origin);
+        std::vector<glm::u8vec4> colour_bank = {
+            glm::u8vec4(0, 0, 0, 0),
+            glm::u8vec4(255, 255, 0, 255),
+            glm::u8vec4(0, 0, 0, 0),
+            glm::u8vec4(0, 0, 0, 0),
         };
+        convert_to_new_size_with_bank(glm::uvec2(8, 8), size, data, colour_bank);
+
+        SpriteData projectile_sd = SpriteData(data, colour_bank, true);
+        // colours used for the misc other sprites:
+        ppu.palette_table[colour_idx] = projectile_sd.colours;
+        ppu.tile_table[33] = projectile_sd.GetBits(0);
+        ppu.tile_table[34] = projectile_sd.GetBits(1); // rotated 90 deg (horizontal)
+
         for (size_t i = 0; i < numProjectiles; i++) {
             Projectile newProj;
             newProj.spriteID = i + 1;
-            newProj.sprite.index = 32;
-            newProj.sprite.attributes = proj_idx;
+            newProj.sprite.index = 33;
+            newProj.sprite.attributes = colour_idx;
             newProj.randomInit();
             projectiles.push_back(newProj);
         }
@@ -148,9 +160,17 @@ void PlayMode::ProjectileUpdate(float dt)
 {
     for (Projectile& p : projectiles) {
         p.pos += dt * p.vel;
+        // change the sprite based on velocity (heading direction)
+        if (p.vel.y != 0) {
+            p.sprite.index = 33;
+        } else {
+            p.sprite.index = 34;
+        }
+        // reinitialize the location once they reach the edge
         if (p.pos.x < 0 || p.pos.y < 0 || p.pos.x > PPU466::ScreenWidth || p.pos.y > PPU466::ScreenHeight) {
             p.randomInit();
         }
+        // check for collisions with player
         if (siphon.collisionWith(p.pos)) {
             if (!p.collision) {
                 // only trigger this effect on the FIRST frame of collision
