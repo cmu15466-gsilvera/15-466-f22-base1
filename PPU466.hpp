@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 #include "load_save_png.hpp"
 
@@ -208,7 +209,7 @@ struct SpriteData {
 
     struct PPU466::Tile GetBits(int idx = 0) const
     {
-        if (idx >= bits.size()) {
+        if (idx >= (int)bits.size()) {
             std::cout << "[WARN]"
                       << "Bits index: " << idx << " out of bounds" << std::endl;
             idx = bits.size() - 1; // set to max
