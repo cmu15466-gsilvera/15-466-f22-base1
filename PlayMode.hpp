@@ -11,7 +11,7 @@
 #define BACKGROUND_COLOUR 1
 #define PROJECTILE_COLOUR 4
 #define TARGET_COLOUR 5
-#define EVIL_TARGET_COLOUR 6
+#define SUPER_TARGET_COLOUR 6
 #define SIPHON_COLOUR 7
 
 // sprite indexes
@@ -146,6 +146,8 @@ struct PlayMode : Mode {
 
     //----- game state -----
     int score = 0;
+    float time_left = 30.0f; // number of seconds you have to play the game
+    bool end_msg = false;
 
     Siphon siphon;
     SpriteData siphon_sd;
@@ -159,8 +161,8 @@ struct PlayMode : Mode {
     std::vector<MovingObject> targets;
     void TargetsUpdate(float dt);
 
-    const int numEvilTargets = 1;
-    std::vector<MovingObject> evilTargets;
+    const int numSuperTargets = 1;
+    std::vector<MovingObject> superTargets;
 
     // input tracking:
     struct Button {

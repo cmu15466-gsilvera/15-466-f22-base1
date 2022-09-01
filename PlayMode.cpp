@@ -122,9 +122,9 @@ PlayMode::PlayMode()
         }
     }
 
-    // evil targets
+    // super targets
     {
-        evilTargets.reserve(numEvilTargets);
+        superTargets.reserve(numSuperTargets);
         // load png
         glm::uvec2 size;
         std::vector<glm::u8vec4> data;
@@ -139,19 +139,19 @@ PlayMode::PlayMode()
 
         SpriteData target_sd = SpriteData(data, colour_bank, false);
         // colours used for the misc other sprites:
-        ppu.palette_table[EVIL_TARGET_COLOUR] = target_sd.colours;
+        ppu.palette_table[SUPER_TARGET_COLOUR] = target_sd.colours;
         ppu.tile_table[TARGET_SPRITE_IDX] = target_sd.GetBits();
 
-        for (size_t i = 0; i < numEvilTargets; i++) {
+        for (size_t i = 0; i < numSuperTargets; i++) {
             MovingObject newTarget;
             newTarget.speed = 20.f;
             newTarget.spriteID = globalSpriteIndex;
             globalSpriteIndex++;
             newTarget.sprite.index = TARGET_SPRITE_IDX;
-            newTarget.sprite.attributes = EVIL_TARGET_COLOUR;
+            newTarget.sprite.attributes = SUPER_TARGET_COLOUR;
             newTarget.randomInit();
             newTarget.hide(3 + rand() % 3);
-            evilTargets.push_back(newTarget);
+            superTargets.push_back(newTarget);
         }
     }
 
@@ -268,20 +268,20 @@ void PlayMode::TargetsUpdate(float dt)
                 t.hide(5); // hide this target for the next 5s
                 p.hide(2); // hide this projectile for the next 2s
                 score++;
-                std::cout << "[GOOD] Score: " << score << std::endl;
+                std::cout << "[GOOD] Score: " << score << " ... Remaining: " << time_left << "s"<< std::endl;
             }
         }
     }
 
-    for (MovingObject& t : evilTargets) {
+    for (MovingObject& t : superTargets) {
         // make the edge respawn wait for a bit before respawning
         t.update(dt);
         for (MovingObject& p : projectiles) {
             if (p.collisionWith(t)) {
-                t.hide(5); // hide this target for the next 5s
-                p.hide(2); // hide this projectile for the next 2s
-                score = std::max(0, score - 5);
-                std::cout << "[EVIL] Score: " << score << std::endl;
+                t.hide(5);  // hide this target for the next 5s
+                p.hide(2);  // hide this projectile for the next 2s
+                score += 5; // super points
+                std::cout << "[SUPER] Score: " << score << " ... Remaining: " << time_left << "s" << std::endl;
             }
         }
     }
@@ -295,11 +295,21 @@ void PlayMode::update(float dt)
     background_fade += dt / 10.0f;
     background_fade -= std::floor(background_fade);
 
-    PlayerUpdate(dt);
+    // tick down the game-over timer
+    time_left -= dt;
 
-    ProjectileUpdate(dt);
+    if (time_left > 0){
+        PlayerUpdate(dt);
 
-    TargetsUpdate(dt);
+        ProjectileUpdate(dt);
+
+        TargetsUpdate(dt);
+    } else {
+        if (!end_msg){
+            std::cout << "Game over! Final score: " << score << std::endl;
+            end_msg = true;
+        }
+    }
 }
 
 void PlayMode::draw(glm::uvec2 const& drawable_size)
@@ -334,7 +344,7 @@ void PlayMode::draw(glm::uvec2 const& drawable_size)
         //     ppu.sprites[i].attributes |= 0x80; //'behind' bit
     }
 
-    for (const MovingObject& t : evilTargets) {
+    for (const MovingObject& t : superTargets) {
         t.updatePPU(ppu);
         // if (i % 2)
         //     ppu.sprites[i].attributes |= 0x80; //'behind' bit
