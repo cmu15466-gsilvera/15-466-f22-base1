@@ -78,7 +78,7 @@ PlayMode::PlayMode()
         ppu.tile_table[PROJECTILE_SPRITE_IDX_0] = projectile_sd.GetBits(0);
         ppu.tile_table[PROJECTILE_SPRITE_IDX_1] = projectile_sd.GetBits(1); // rotated 90 deg (horizontal)
 
-        for (size_t i = 0; i < numProjectiles; i++) {
+        for (int i = 0; i < numProjectiles; i++) {
             MovingObject newProj;
             newProj.speed = 50.f;
             newProj.spriteID = globalSpriteIndex;
@@ -110,7 +110,7 @@ PlayMode::PlayMode()
         ppu.palette_table[TARGET_COLOUR] = target_sd.colours;
         ppu.tile_table[TARGET_SPRITE_IDX] = target_sd.GetBits();
 
-        for (size_t i = 0; i < numTargets; i++) {
+        for (int i = 0; i < numTargets; i++) {
             MovingObject newTarget;
             newTarget.speed = 30.f;
             newTarget.spriteID = globalSpriteIndex;
@@ -142,7 +142,7 @@ PlayMode::PlayMode()
         ppu.palette_table[SUPER_TARGET_COLOUR] = target_sd.colours;
         ppu.tile_table[TARGET_SPRITE_IDX] = target_sd.GetBits();
 
-        for (size_t i = 0; i < numSuperTargets; i++) {
+        for (int i = 0; i < numSuperTargets; i++) {
             MovingObject newTarget;
             newTarget.speed = 20.f;
             newTarget.spriteID = globalSpriteIndex;
