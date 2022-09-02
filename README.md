@@ -1,8 +1,8 @@
-# (TODO: your game's title)
+# Redirekt
 
-Author: (TODO: your name)
+Author: Gustavo Silvera
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: 2D "bullet-hell" style game where the objective is to maximize your score in a set amount of time by redirecting projectiles (in the 4 cardinal directions) to hit targets. 
 
 Screen Shot:
 
